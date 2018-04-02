@@ -1,0 +1,21 @@
+Package: jspputils
+Type: Package
+Title: Series of utilities to interface R with proteomics data analysis
+Version: 0.1.0
+Author: Sebastian Paez
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: Suite of tools to make life easyer ... reading data from the output
+    of the commmonly used search engines in the lab, and some util functions to 
+    make easyer plots and such ....
+License: Apache 2.0
+Encoding: UTF-8
+LazyData: true
+Suggests: testthat,
+    UniProt.ws
+Imports: limma,
+    purrr,
+    Biobase,
+    readr,
+    ggrepel,
+    seplyr
+Depends: dplyr
