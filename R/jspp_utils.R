@@ -43,7 +43,13 @@ mqtxt_to_eset <- function(filename,
 	esetData$`Has Missing` <- is.na(rowSums(abundance_cols))
 	esetData$`n.Missing` <- rowSums(is.na(abundance_cols))
 
-	feature_cols <- dplyr::select(esetData, -dplyr::matches("Intensity"))
+	# Adds original intensities inside the feature data
+	mycolnames <- colnames(esetData)
+	feature_cols <- seplyr::rename_se(
+		esetData,
+		wrapr::named_map_builder(
+			paste("Original", grep("Intensity", mycolnames, value = TRUE)),
+			grep("Intensity", mycolnames, value = TRUE)))
 
 	Eset <- Biobase::ExpressionSet(
 		abundance_cols,
@@ -96,7 +102,7 @@ make_exp_design <- function(eset, factor_vector = c(WT = 'WT', KO = 'KO')) {
 # num of peptides/proteins/psm/msms/modified vs unmodified per sample
 #
 
-impute_eset <- function(eset, nPcs){
+impute_eset <- function(eset, nPcs, seed = 6, ...){
 	#myeset2 <- myeset[rowSums(data.matrix(Biobase::exprs(myeset)), na.rm = TRUE) != 0,]
 	#Biobase::exprs(myeset2) <- Biobase::exprs(myeset2) - min(Biobase::exprs(myeset2), na.rm = TRUE)
 
@@ -108,9 +114,9 @@ impute_eset <- function(eset, nPcs){
 					   sum(zero_variance_rows),
 					   "- rows"))
 		eset <- eset[!zero_variance_rows,]
-	}
+}
 
-	pc <- pcaMethods::pca(eset, nPcs = nPcs, method = "ppca")
+	pc <- pcaMethods::pca(eset, nPcs = nPcs, method = "ppca", seed = seed, ...)
 	#pc <- pca(myeset2, nPcs = 3,  method = 'bpca')
 	imputed <- t(pcaMethods::completeObs(pc))
 	#pairs(imputed)
@@ -126,3 +132,10 @@ plotpca <- function(eset, pcaresult) {
 		ggplot2::xlab(paste("PC1", pcaresult@R2[1] * 100, "% of variance")) +
 		ggplot2::ylab(paste("PC2", pcaresult@R2[2] * 100, "% of variance"))
 }
+
+
+to_clipboard <- function(x) {
+	write.table(x, "clipboard-512", sep = "\t", row.names = FALSE)
+	print("Done")
+}
+
