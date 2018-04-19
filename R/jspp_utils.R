@@ -5,7 +5,10 @@ mqtxt_to_eset <- function(filename,
 						  remove_decoys = TRUE,
 						  remove_contaminants = TRUE,
 						  additional_filter = NULL,
-						  transformfun = log2) {
+						  transformfun = log2,
+						  drop_cols = FALSE,
+						  missing_value = 0) {
+	# TODO consider changing this backend to fread
 	esetData <- readr::read_tsv(filename)
 
 	if (remove_decoys) {
@@ -34,12 +37,26 @@ mqtxt_to_eset <- function(filename,
 			additional_filter)
 	}
 
+	if (is.character(drop_cols)) {
+		esetData <- esetData[, !grepl(drop_cols, colnames(esetData))]
+	}
+
 	abundance_cols <- dplyr::select(esetData, dplyr::matches("Intensity.+")) %>%
 		dplyr::select(-dplyr::matches("__")) %>%
-		data.matrix() %>%
-		transformfun()
+		data.matrix()
 
+	if (is.null(missing_value)) {
+		abundance_cols[abundance_cols == missing_value] <- NA
+	}
+
+
+	if (normalize) {
+		abundance_cols <- limma::normalizeBetweenArrays(abundance_cols)
+	}
+
+	abundance_cols <- abundance_cols %>% transformfun()
 	abundance_cols[is.infinite(abundance_cols)] <- NA
+
 	esetData$`Has Missing` <- is.na(rowSums(abundance_cols))
 	esetData$`n.Missing` <- rowSums(is.na(abundance_cols))
 
@@ -56,15 +73,13 @@ mqtxt_to_eset <- function(filename,
 		featureData = as(feature_cols, "AnnotatedDataFrame"))
 
 	if (impute) {
+		warning("Imputing Values from the dataset")
 		Biobase::exprs(Eset)[is.na(Biobase::exprs(Eset))] <-
 			min(Biobase::exprs(Eset), na.rm = TRUE)
 		Biobase::exprs(Eset)[0 > Biobase::exprs(Eset)] <-
 			min(Biobase::exprs(Eset)[0 < Biobase::exprs(Eset)], na.rm = TRUE)
 	}
 
-	if (normalize) {
-		Biobase::exprs(Eset) <- limma::normalizeBetweenArrays(Biobase::exprs(Eset))
-	}
 	# TODO add warning to say what was imputed
 
 	return(Eset)
