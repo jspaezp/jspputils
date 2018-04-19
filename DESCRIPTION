@@ -3,7 +3,7 @@ Type: Package
 Title: Series of utilities to interface R with proteomics data analysis
 Version: 0.1.0
 Author: Sebastian Paez
-Maintainer: The package maintainer <yourself@somewhere.net>
+Maintainer: Sebastian Paez <jspaezp@gmail.com>
 Description: Suite of tools to make life easyer ... reading data from the output
     of the commmonly used search engines in the lab, and some util functions to 
     make easyer plots and such ....
@@ -17,5 +17,8 @@ Imports: limma,
     Biobase,
     readr,
     ggrepel,
-    seplyr
-Depends: dplyr
+    seplyr,
+    htmlwidgets,
+    plotly
+Depends: dplyr,
+    ggplot2

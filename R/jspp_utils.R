@@ -82,18 +82,51 @@ mqtxt_to_eset <- function(filename,
 #' @export
 #'
 #' @examples
-make_exp_design <- function(eset, factor_vector = c(WT = 'WT', KO = 'KO')) {
+make_exp_design <- function(eset, factor_vector = c(WT = 'WT', KO = 'KO'), reference_factor = 'KO', batch_vector = NULL) {
 	# Makes only simple single factor designs
 	# List should be in the form of c(WT = 'WT', KO = 'KO'), being WT and KO
 	# part of the names of the columns in the given eset
+	#
 
-	joint_factors <- paste(factor_vector, sep = '|', collapse = '|')
-	cleaner_regex <- paste0(".*(", joint_factors, ").*$")
-	samples <- gsub(cleaner_regex, "\\1", colnames(eset))
+	get_factors.colnames <- function(my_colnames, named_vector) {
+		# EXAMPLE
+		# > mycolumns <- c('A1', 'A2', 'B1', 'B2')
+		# > my_categories <- c('COOL_1' = 'A', 'COOL_2' = 'B')
+		# > get_factors.colnames(mycolumns, my_categories)
+		# [1] COOL_1 COOL_1 COOL_2 COOL_2
+		# Levels: COOL_1 COOL_2
+		matching_table <- sapply(named_vector, function(x){grepl(x, my_colnames)})
 
-	s <- factor(factor_vector[samples])
-	design <- model.matrix(~0+s)
-	colnames(design) <- levels(s)
+		if (any(rowSums(matching_table) != 1)) {
+			print(matching_table)
+			stop('Variables in the provided vctor are not mutually exclusive')
+		}
+
+		s_mainfactor <- factor(levels = colnames(matching_table))
+
+		for (i in colnames(matching_table)) {
+			s_mainfactor[(matching_table[,i])] <- i
+		}
+		return(s_mainfactor)
+	}
+
+	s_mainfactor <- get_factors.colnames(colnames(eset), factor_vector)
+
+
+	if (is.character(reference_factor)) {
+		print(paste("Using", reference_factor, "as a reference"))
+		s_mainfactor <- relevel(s_mainfactor, reference_factor)
+	}
+
+	if (is.null(batch_vector)) {
+		design <- model.matrix(~0+s_mainfactor)
+		colnames(design) <- levels(s_mainfactor)
+	} else {
+		s_batch <- get_factors.colnames(colnames(eset), batch_vector)
+		design <- model.matrix(~ s_batch + s_mainfactor)
+	}
+
+	rownames(design) <- colnames(eset)
 	return(design)
 }
 
@@ -125,17 +158,52 @@ impute_eset <- function(eset, nPcs, seed = 6, ...){
 }
 
 
-plotpca <- function(eset, pcaresult) {
-	df <- merge(pcaMethods::scores(pcaresult), Biobase::pData(eset), by = 0)
-	ggplot2::ggplot(df, ggplot2::aes(PC1, PC2, colour = as.character(Row.names))) +
-		ggplot2::geom_point() +
-		ggplot2::xlab(paste("PC1", pcaresult@R2[1] * 100, "% of variance")) +
-		ggplot2::ylab(paste("PC2", pcaresult@R2[2] * 100, "% of variance"))
-}
-
-
 to_clipboard <- function(x) {
 	write.table(x, "clipboard-512", sep = "\t", row.names = FALSE)
 	print("Done")
 }
 
+read_panther <- function(file, verbose = TRUE) {
+
+	raw_lines <- readLines(file)
+
+	tablelines <- raw_lines %>% grepl("^.*(\\t).*(\\1).*$", .)
+	contextlines <- raw_lines[{raw_lines %>% grepl("^.+$", .)} & !tablelines]
+
+	context <- strsplit(contextlines, '\t')
+
+	pantherdf <- readr::read_tsv(
+		file,
+		skip =  min(which(tablelines)) - 1)
+
+	foldcolumn <- colnames(pantherdf) %>%
+		grep("fold",
+			 .,
+			 ignore.case = TRUE,
+			 value = TRUE)
+
+	pantherdf[[foldcolumn]] <- gsub("[<> ]", "", pantherdf[[foldcolumn]]) %>%
+		as.numeric()
+
+	for (i in context) {
+		attr(pantherdf, make.names(i[[1]])) <- i[[2]]
+	}
+
+	if (verbose) {
+		print(attributes(pantherdf))
+	}
+
+	return(pantherdf)
+}
+
+
+count_missing_by.data.frame <- function(data, named_character_vector) {
+
+	mynames <- colnames(data)
+	column_selectors <- purrr::map(named_character_vector, function(x){ grepl(x, mynames) })
+
+	df <- purrr::map_dfc(
+		column_selectors,
+		function(x){ rowSums(is.na(data[, x])) })
+	return(df)
+}
