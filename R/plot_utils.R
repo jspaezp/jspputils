@@ -236,3 +236,90 @@ plot_n_saveplotly <- function(ggplotobject, filename, ...) {
 	return(TRUE)
 }
 
+makealltheplots <- function(fit,
+							coef = 's_mainfactorWT',
+							contrast_name = coef,
+							plotprefix = format(Sys.time(), "%Y%m%d_%H%M%S_"),
+							nlabels = 20) {
+	mydf <- limma::topTable(
+		fit, coef = coef,
+		number = Inf,
+		confint = TRUE)
+
+	mydf[[names_column]] <- paste0(
+		mydf[[names_column]], ": ",
+		mydf[["Positions.within.proteins"]])
+
+
+	mydf[["Site.Names"]] <- paste0(
+		mydf[[names_column]], "-",
+		mydf[['Protein.names']],
+		": ",
+		mydf[["Positions.within.proteins"]])
+
+	g <- maplot.data.frame(
+		mydf,
+		pval = "P.Value",
+		foldchange = 'logFC',
+		nlabel = nlabels,
+		labelcol = "Site.Names",
+		colour_limits = c(0,0.05),
+		xlab_name = 'Mean log2 Intensity',
+		ylab_name = paste0('Log2 Fold Change', contrast_name),
+		add_aes_base = list(x = 'AveExpr'))
+	plot_n_saveplotly(g, paste(plotprefix, 'maplot_longnames.html'))
+
+	g <- maplot.data.frame(
+		mydf,
+		pval = "P.Value",
+		foldchange = 'logFC',
+		nlabel = nlabels,
+		labelcol = names_column,
+		colour_limits = c(0,0.05),
+		add_aes_base = list(x = 'AveExpr'),
+		xlab_name = 'Mean log2 Intensity',
+		ylab_name = paste0('Log2 Fold Change', contrast_name),
+		label_arrangeTerms = 'P.Value')
+	plot_n_saveplotly(g, paste(plotprefix, 'maplot_shortnames.html'))
+
+	g <- volcanoplot.data.frame(
+		mydf,
+		pval = 'P.Value',
+		add_aes_base = list(colour = "as.character(n.Missing)"),
+		nlabel = nlabels,
+		labelcol = names_column,
+		xlab_name = paste0('Log2 Fold Change', contrast_name),
+		ylab_name = 'P.Value') +
+		ggplot2::guides(colour = ggplot2::guide_legend(title =  "Number of \nMissing Values"))
+	plot_n_saveplotly(g, paste(plotprefix, 'volcano_missingcolours.html'))
+
+	g <- plot_ranked_folds.data.frame(
+		mydf,
+		labelcol = names_column,
+		nlabel = nlabels,
+		add_aes_base = list(colour = "as.character(n.Missing)"),
+		xlab_name =  paste0('Ranked Log Fold Change', contrast_name),
+		ylab_name =  paste0('Log2 Fold Change', contrast_name)) +
+		ggplot2::guides(colour = ggplot2::guide_legend(title =  "Number of \nMissing Values"))
+	plot_n_saveplotly(g, paste(plotprefix, 'rankedfolds_missingcolours.html'))
+
+
+	g <- plot_ranked_folds.data.frame(
+		mydf,
+		labelcol = names_column,
+		nlabel = nlabels,
+		xlab_name = paste0('Ranked Log2 Fold Change', contrast_name),
+		ylab_name = paste0('Log2 Fold Change Change', contrast_name))
+	plot_n_saveplotly(g, paste(plotprefix, 'rankedfolds_nocolor.html'))
+
+
+	g <- volcanoplot.data.frame(
+		mydf,
+		pval = 'P.Value',
+		labelcol = names_column,
+		nlabel = nlabels,
+		xlab_name = paste0('Log2 Fold Change', contrast_name),
+		ylab_name = 'P. Value')
+	plot_n_saveplotly(g, paste(plotprefix, 'volcano_nocolor.html'))
+	return(TRUE)
+}
