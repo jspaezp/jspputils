@@ -7,6 +7,7 @@ mqtxt_to_eset <- function(filename,
 						  additional_filter = NULL,
 						  transformfun = log2,
 						  drop_cols = FALSE,
+						  normalization_method = NULL,
 						  missing_value = 0) {
 	# TODO consider changing this backend to fread
 	esetData <- readr::read_tsv(filename)
@@ -45,13 +46,15 @@ mqtxt_to_eset <- function(filename,
 		dplyr::select(-dplyr::matches("__")) %>%
 		data.matrix()
 
-	if (is.null(missing_value)) {
+	if (!is.null(missing_value)) {
 		abundance_cols[abundance_cols == missing_value] <- NA
 	}
 
 
 	if (normalize) {
-		abundance_cols <- limma::normalizeBetweenArrays(abundance_cols)
+		abundance_cols <- limma::normalizeBetweenArrays(
+			abundance_cols,
+			method = normalization_method)
 	}
 
 	abundance_cols <- abundance_cols %>% transformfun()
@@ -73,6 +76,7 @@ mqtxt_to_eset <- function(filename,
 		featureData = as(feature_cols, "AnnotatedDataFrame"))
 
 	if (impute) {
+		# TODO add a way to add the min to each column by separate
 		warning("Imputing Values from the dataset")
 		Biobase::exprs(Eset)[is.na(Biobase::exprs(Eset))] <-
 			min(Biobase::exprs(Eset), na.rm = TRUE)
@@ -296,6 +300,14 @@ read_panther <- function(file, verbose = TRUE) {
 	return(pantherdf)
 }
 
+
+count_missing_by.ExpressionSet <- function(data, named_character_vector) {
+	mydata <- Biobase::exprs(data)
+	ret <- count_missing_by.data.frame(
+		mydata,
+		named_character_vector = named_character_vector)
+	return(ret)
+}
 
 count_missing_by.data.frame <- function(data, named_character_vector) {
 

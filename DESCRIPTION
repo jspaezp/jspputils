@@ -1,7 +1,7 @@
 Package: jspputils
 Type: Package
 Title: Series of utilities to interface R with proteomics data analysis
-Version: 0.1.0
+Version: 0.1.1
 Author: Sebastian Paez
 Maintainer: Sebastian Paez <jspaezp@gmail.com>
 Description: Suite of tools to make life easyer ... reading data from the output
@@ -12,7 +12,8 @@ Encoding: UTF-8
 LazyData: true
 Suggests: testthat,
     UniProt.ws,
-    ComplexHeatmap
+    ComplexHeatmap,
+    corrplot
 Imports: limma,
     purrr,
     Biobase,
@@ -21,6 +22,7 @@ Imports: limma,
     seplyr,
     htmlwidgets,
     plotly,
-    data.table
+    data.table,
 Depends: dplyr,
     ggplot2
+biocViews:

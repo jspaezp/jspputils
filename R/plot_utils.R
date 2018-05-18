@@ -246,6 +246,10 @@ makealltheplots <- function(fit,
 		number = Inf,
 		confint = TRUE)
 
+	mydf_colnames <- colnames(mydf)
+
+	if ("Positions.within.proteins" %in% mydf_colnames)
+
 	mydf[[names_column]] <- paste0(
 		mydf[[names_column]], ": ",
 		mydf[["Positions.within.proteins"]])
