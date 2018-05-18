@@ -6,14 +6,23 @@ Author: Sebastian Paez
 Maintainer: Sebastian Paez <jspaezp@gmail.com>
 Description: Suite of tools to make life easyer ... reading data from the output
     of the commmonly used search engines in the lab, and some util functions to 
-    make easyer plots and such ....
+    make easyer plots and such .... It installs all my commonly used R packages
+    in a convenient way.
 License: Apache 2.0
 Encoding: UTF-8
 LazyData: true
 Suggests: testthat,
     UniProt.ws,
     ComplexHeatmap,
-    corrplot
+    corrplot,
+    rmarkdown,
+    tidyverse,
+    bit64,
+    htmlwidgets,
+    parallel,
+    crayon,
+    tidyr,
+    devtools
 Imports: limma,
     purrr,
     Biobase,
@@ -25,4 +34,4 @@ Imports: limma,
     data.table,
 Depends: dplyr,
     ggplot2
-biocViews:
+biocViews: 
