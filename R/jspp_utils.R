@@ -18,7 +18,7 @@ mqtxt_to_eset <- function(filename,
 				esetData,
 				is.na(esetData[["Reverse"]]))
 		} else {
-			warning("No Reverse Column in the samples, skipping decoy removal")
+			warning("No Reverse Column in the samples, skipping decoy removal\n")
 		}
 	}
 
@@ -28,7 +28,7 @@ mqtxt_to_eset <- function(filename,
 				esetData,
 				is.na(esetData[["Potential contaminant"]]))
 		} else {
-			warning("No Potential contaminant Column in the samples, skipping decoy removal")
+			warning("No Potential contaminant Column in the samples, skipping decoy removal\n")
 		}
 	}
 
@@ -77,14 +77,15 @@ mqtxt_to_eset <- function(filename,
 
 	if (impute) {
 		# TODO add a way to add the min to each column by separate
-		warning("Imputing Values from the dataset")
+		num_missing <- is.na(Biobase::exprs(Eset))
+		warning(glue::glue(
+				"Imputing {num_missing} Values from the dataset\n",
+				num_missing))
 		Biobase::exprs(Eset)[is.na(Biobase::exprs(Eset))] <-
 			min(Biobase::exprs(Eset), na.rm = TRUE)
 		Biobase::exprs(Eset)[0 > Biobase::exprs(Eset)] <-
 			min(Biobase::exprs(Eset)[0 < Biobase::exprs(Eset)], na.rm = TRUE)
 	}
-
-	# TODO add warning to say what was imputed
 
 	return(Eset)
 }
@@ -94,80 +95,7 @@ mqtxt_to_sqlite <- function(txt_dir,
 							db_name,
 						  verbose = F,
 						  light =  F) {
-	esetData <- readr::read_tsv(filename)
-
-	if (remove_decoys) {
-		if ("Reverse" %in% colnames(esetData)) {
-			esetData <- dplyr::filter(
-				esetData,
-				is.na(esetData[["Reverse"]]))
-		} else {
-			warning("No Reverse Column in the samples, skipping decoy removal")
-		}
-	}
-
-	if (remove_contaminants) {
-		if ("Potential contaminant" %in% colnames(esetData)) {
-			esetData <- dplyr::filter(
-				esetData,
-				is.na(esetData[["Potential contaminant"]]))
-		} else {
-			warning("No Potential contaminant Column in the samples, skipping decoy removal")
-		}
-	}
-
-	if (is.character(additional_filter)) {
-		esetData <- seplyr::filter_se(
-			esetData,
-			additional_filter)
-	}
-
-	if (is.character(drop_cols)) {
-		esetData <- esetData[, !grepl(drop_cols, colnames(esetData))]
-	}
-
-	abundance_cols <- dplyr::select(esetData, dplyr::matches("Intensity.+")) %>%
-		dplyr::select(-dplyr::matches("__")) %>%
-		data.matrix()
-
-	if (is.null(missing_value)) {
-		abundance_cols[abundance_cols == missing_value] <- NA
-	}
-
-
-	if (normalize) {
-		abundance_cols <- limma::normalizeBetweenArrays(abundance_cols)
-	}
-
-	abundance_cols <- abundance_cols %>% transformfun()
-	abundance_cols[is.infinite(abundance_cols)] <- NA
-
-	esetData$`Has Missing` <- is.na(rowSums(abundance_cols))
-	esetData$`n.Missing` <- rowSums(is.na(abundance_cols))
-
-	# Adds original intensities inside the feature data
-	mycolnames <- colnames(esetData)
-	feature_cols <- seplyr::rename_se(
-		esetData,
-		wrapr::named_map_builder(
-			paste("Original", grep("Intensity", mycolnames, value = TRUE)),
-			grep("Intensity", mycolnames, value = TRUE)))
-
-	Eset <- Biobase::ExpressionSet(
-		abundance_cols,
-		featureData = as(feature_cols, "AnnotatedDataFrame"))
-
-	if (impute) {
-		warning("Imputing Values from the dataset")
-		Biobase::exprs(Eset)[is.na(Biobase::exprs(Eset))] <-
-			min(Biobase::exprs(Eset), na.rm = TRUE)
-		Biobase::exprs(Eset)[0 > Biobase::exprs(Eset)] <-
-			min(Biobase::exprs(Eset)[0 < Biobase::exprs(Eset)], na.rm = TRUE)
-	}
-
-	# TODO add warning to say what was imputed
-
-	return(Eset)
+	stop("Not implemented yet")
 }
 
 
@@ -182,11 +110,11 @@ mqtxt_to_sqlite <- function(txt_dir,
 #' @export
 #'
 #' @examples
-make_exp_design <- function(eset, factor_vector = c(WT = 'WT', KO = 'KO'), reference_factor = 'KO', batch_vector = NULL) {
-	# Makes only simple single factor designs
-	# List should be in the form of c(WT = 'WT', KO = 'KO'), being WT and KO
-	# part of the names of the columns in the given eset
-	#
+make_exp_design <- function(
+	eset,
+	factor_vector = c(WT = 'WT', KO = 'KO'),
+	reference_factor = 'KO',
+	batch_vector = NULL) {
 
 	get_factors.colnames <- function(my_colnames, named_vector) {
 		# EXAMPLE
@@ -198,8 +126,9 @@ make_exp_design <- function(eset, factor_vector = c(WT = 'WT', KO = 'KO'), refer
 		matching_table <- sapply(named_vector, function(x){grepl(x, my_colnames)})
 
 		if (any(rowSums(matching_table) != 1)) {
+			print('Variables in the provided vector are not mutually exclusive\n')
 			print(matching_table)
-			stop('Variables in the provided vctor are not mutually exclusive')
+			stop('Variables in the provided vector are not mutually exclusive\n')
 		}
 
 		s_mainfactor <- factor(levels = colnames(matching_table))
@@ -263,8 +192,8 @@ to_clipboard <- function(x) {
 	print("Done")
 }
 
-from_clipboard  <- function(header=TRUE,...) {
-	read.table("clipboard",sep="\t",header=header, as.is = TRUE, ...)
+from_clipboard  <- function(header=TRUE, ...) {
+	read.table("clipboard", sep = "\t",header = header, as.is = TRUE, ...)
 }
 
 read_panther <- function(file, verbose = TRUE) {

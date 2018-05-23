@@ -18,7 +18,6 @@ Suggests: testthat,
     rmarkdown,
     tidyverse,
     bit64,
-    htmlwidgets,
     parallel,
     crayon,
     tidyr,
@@ -31,7 +30,9 @@ Imports: limma,
     seplyr,
     htmlwidgets,
     plotly,
-    data.table,
+    data.table,,
+    glue
 Depends: dplyr,
     ggplot2
 biocViews: 
+RoxygenNote: 6.0.1

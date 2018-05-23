@@ -1,0 +1,48 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# jspputils
+
+The goal of jspputils is to ...
+
+## Installation
+
+You can install jspputils from github with:
+
+```{r gh-installation, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("jspaezp/jspputils")
+```
+
+## Example
+
+This is a basic example which shows you how to do a template data analysis
+
+```{r example}
+
+
+
+```
+
+## TODOS
+
+- Document functions
+- Add warnings when imputing values and report how many
+- Check for duplications in maplot
+- Make generic methods out of the plotting functions to accept fits
+- Make anothr package with dummy data
+- Use the former package to write the unit testing
+- Make functions to output oilerplate analysis for maxquant data
+- make function to find the gene names of a fit and return its name or an error 
+- Use the former function in the plotting scenarios

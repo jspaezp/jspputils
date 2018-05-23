@@ -6,15 +6,10 @@ ggplot <- function(..., xlab_name, ylab_name) {
 	return(g)
 }
 
-# TODO chech for duplication in maplot
 pvaluecolours <- function(name = "P. Value", ...){
 	ggplot2::scale_colour_gradientn(
 		colours = c("red",
 					"blue"),
-		# values = c(0, 0.1),
-		# labels = c(0.001, 0.05, 1),
-		# breaks = c(0, 0.1),
-		# trans = "sqrt",
 		space = "Lab",
 		na.value = "gray",
 		limits = c(0,0.1),
@@ -26,36 +21,14 @@ pvaluecolours <- function(name = "P. Value", ...){
 }
 
 
-extract_fit_table <- function(fit) {
-	fittable <- limma::topTable(fit, number = Inf)
-	fittable$ID <- rownames(fittable)
-	colnames(fittable) <- gsub("^genes\\.", "", colnames(fittable))
+labeltopn <- function(
+	df,
+	n=10,
+	mapping,
+	arrangeTerms,
+	filterterms = NULL,
+	...) {
 
-	fullfitdf <- as.data.frame(fit)
-	fullfitdf$ID <- rownames(fullfitdf)
-	colnames(fullfitdf) <- gsub("^genes\\.", "", colnames(fullfitdf))
-
-	#nonnumeric_cols <- colnames(fittable)[sapply(fittable, function(x){!is.numeric(x)})]
-	#joincols <- intersect(intersect(colnames(fullfitdf) , colnames(fittable) ), nonnumeric_cols)
-
-	fullfitdf2 <- dplyr::right_join(
-		fullfitdf,
-		fittable
-		) # by  = joincols
-
-	if (nrow(fullfitdf2) != nrow(fittable) | nrow(fullfitdf2) != nrow(fullfitdf)) {
-		messagetemplate <- c("Number of rows (",
-							 ") in the original and the generated table do not match,",
-							 " try manually extracting the table")
-		print(c(nrow(fittable), nrow(fullfitdf)))
-		message <- paste(messagetemplate[[1]], nrow(fittable), nrow(fullfitdf), messagetemplate[[2]])
-		stop(message)
-	}
-	return(fullfitdf2)
-}
-
-
-labeltopn <- function(df, n=10, mapping, arrangeTerms, filterterms = NULL, ...) {
 	if (n < 1) {
 		return(NULL)
 	}
@@ -229,18 +202,34 @@ plotpca <- function(eset, pcaresult) {
 }
 
 
-plot_n_saveplotly <- function(ggplotobject, filename, ...) {
+plot_n_saveplotly <- function(
+	ggplotobject,
+	filename,
+	dry = TRUE,
+	saveplotly = FALSE,
+	...) {
+
 	plotlyobj <- plotly::ggplotly(ggplotobject)
-	htmlwidgets::saveWidget(plotlyobj, file = filename, ...)
-	print(ggplotobject)
+	if (!dry) {
+		print(ggplotobject)
+		if (saveplotly) {
+			htmlwidgets::saveWidget(plotlyobj, file = filename, ...)
+		}
+	}
 	return(TRUE)
 }
 
-makealltheplots <- function(fit,
-							coef = 's_mainfactorWT',
-							contrast_name = coef,
-							plotprefix = format(Sys.time(), "%Y%m%d_%H%M%S_"),
-							nlabels = 20) {
+makealltheplots <- function(
+	fit,
+	coef = 's_mainfactorWT',
+	contrast_name = coef,
+	plotprefix = format(Sys.time(), "%Y%m%d_%H%M%S_"),
+	names_column,
+	P_value_col = "P.Value",
+	nlabels = 20,
+	dry = TRUE,
+	saveplotly = FALSE) {
+
 	mydf <- limma::topTable(
 		fit, coef = coef,
 		number = Inf,
@@ -249,6 +238,8 @@ makealltheplots <- function(fit,
 	mydf_colnames <- colnames(mydf)
 
 	if ("Positions.within.proteins" %in% mydf_colnames)
+
+	# Modify Here to be able to change the names to be appended
 
 	mydf[[names_column]] <- paste0(
 		mydf[[names_column]], ": ",
@@ -263,7 +254,7 @@ makealltheplots <- function(fit,
 
 	g <- maplot.data.frame(
 		mydf,
-		pval = "P.Value",
+		pval = P_value_col,
 		foldchange = 'logFC',
 		nlabel = nlabels,
 		labelcol = "Site.Names",
@@ -271,11 +262,15 @@ makealltheplots <- function(fit,
 		xlab_name = 'Mean log2 Intensity',
 		ylab_name = paste0('Log2 Fold Change', contrast_name),
 		add_aes_base = list(x = 'AveExpr'))
-	plot_n_saveplotly(g, paste(plotprefix, 'maplot_longnames.html'))
+	plot_n_saveplotly(
+		g,
+		paste(plotprefix, 'maplot_longnames.html'),
+		dry = dry,
+		saveplotly = saveplotly)
 
 	g <- maplot.data.frame(
 		mydf,
-		pval = "P.Value",
+		pval = P_value_col,
 		foldchange = 'logFC',
 		nlabel = nlabels,
 		labelcol = names_column,
@@ -283,8 +278,12 @@ makealltheplots <- function(fit,
 		add_aes_base = list(x = 'AveExpr'),
 		xlab_name = 'Mean log2 Intensity',
 		ylab_name = paste0('Log2 Fold Change', contrast_name),
-		label_arrangeTerms = 'P.Value')
-	plot_n_saveplotly(g, paste(plotprefix, 'maplot_shortnames.html'))
+		label_arrangeTerms = P_value_col)
+	plot_n_saveplotly(
+		g,
+		paste(plotprefix, 'maplot_shortnames.html'),
+		dry = dry,
+		saveplotly = saveplotly)
 
 	g <- volcanoplot.data.frame(
 		mydf,
@@ -293,9 +292,13 @@ makealltheplots <- function(fit,
 		nlabel = nlabels,
 		labelcol = names_column,
 		xlab_name = paste0('Log2 Fold Change', contrast_name),
-		ylab_name = 'P.Value') +
+		ylab_name = "P. Value") +
 		ggplot2::guides(colour = ggplot2::guide_legend(title =  "Number of \nMissing Values"))
-	plot_n_saveplotly(g, paste(plotprefix, 'volcano_missingcolours.html'))
+	plot_n_saveplotly(
+		g,
+		paste(plotprefix, 'volcano_missingcolours.html'),
+		dry = dry,
+		saveplotly = saveplotly)
 
 	g <- plot_ranked_folds.data.frame(
 		mydf,
@@ -305,7 +308,11 @@ makealltheplots <- function(fit,
 		xlab_name =  paste0('Ranked Log Fold Change', contrast_name),
 		ylab_name =  paste0('Log2 Fold Change', contrast_name)) +
 		ggplot2::guides(colour = ggplot2::guide_legend(title =  "Number of \nMissing Values"))
-	plot_n_saveplotly(g, paste(plotprefix, 'rankedfolds_missingcolours.html'))
+	plot_n_saveplotly(
+		g,
+		paste(plotprefix, 'rankedfolds_missingcolours.html'),
+		dry = dry,
+		saveplotly = saveplotly)
 
 
 	g <- plot_ranked_folds.data.frame(
@@ -314,16 +321,24 @@ makealltheplots <- function(fit,
 		nlabel = nlabels,
 		xlab_name = paste0('Ranked Log2 Fold Change', contrast_name),
 		ylab_name = paste0('Log2 Fold Change Change', contrast_name))
-	plot_n_saveplotly(g, paste(plotprefix, 'rankedfolds_nocolor.html'))
+	plot_n_saveplotly(
+		g,
+		paste(plotprefix, 'rankedfolds_nocolor.html'),
+		dry = dry,
+		saveplotly = saveplotly)
 
 
 	g <- volcanoplot.data.frame(
 		mydf,
-		pval = 'P.Value',
+		pval = P_value_col,
 		labelcol = names_column,
 		nlabel = nlabels,
 		xlab_name = paste0('Log2 Fold Change', contrast_name),
 		ylab_name = 'P. Value')
-	plot_n_saveplotly(g, paste(plotprefix, 'volcano_nocolor.html'))
+	plot_n_saveplotly(
+		g,
+		paste(plotprefix, 'volcano_nocolor.html'),
+		dry = dry,
+		saveplotly = saveplotly)
 	return(TRUE)
 }
