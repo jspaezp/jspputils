@@ -30,7 +30,7 @@ Imports: limma,
     seplyr,
     htmlwidgets,
     plotly,
-    data.table,,
+    data.table,
     glue
 Depends: dplyr,
     ggplot2

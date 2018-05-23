@@ -20,5 +20,4 @@ test_that("multiplication works", {
 	purrr::map(.x = x, purrr::partial(find_mod, x = split_mods(testingset)[[1]]))
 	mapmods(x, split_mods(testingset)[[1]])
 	tidyfy_mods(testingset)
-  expect_equal(2 * 2, 4)
 })

@@ -1,0 +1,333 @@
+---
+title: "Whole Cortex Phospho 05112018"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+
+
+```{r}
+require(jspputils)
+getwd()
+
+```
+
+# initial QC
+
+```{r}
+
+filename <- '../combined/txt/Phospho (STY)Sites.txt'
+additionalfilter <- "`Localization prob` > 0.75"
+myeset <- mqtxt_to_eset(filename, 
+						normalize = FALSE, 
+						impute = FALSE, 
+						transformfun = log2,
+						additional_filter = additionalfilter
+						)
+
+group_missing <- count_missing_by.data.frame(
+	Biobase::exprs(myeset), 
+	named_character_vector = c('Hemi' = 'Hemi-', 'WT' = 'WT-'))
+
+colnames(group_missing) <- paste0('N.missing.in.', colnames(group_missing))
+
+dim(myeset)
+group_missing %>% lapply(table)
+
+missing_in_Hemi <- group_missing$N.missing.in.Hemi > 6 
+missing_in_WT <- group_missing$N.missing.in.WT > 6 
+
+missing_in_both <- missing_in_Hemi & missing_in_WT
+
+table(missing_in_both)
+
+myeset <- mqtxt_to_eset(filename, 
+						normalize = FALSE, 
+						impute = TRUE, 
+						transformfun = log2,
+						additional_filter = additionalfilter
+						)
+```
+
+```{r}
+tmpset <- myeset[!missing_in_both,]
+limma::plotMDS(tmpset)
+
+# pairs(Biobase::exprs(myeset))
+corrplot::corrplot(cor(Biobase::exprs(tmpset)), order = 'hclus')
+plot_dists.eset(tmpset)
+boxplot(Biobase::exprs(tmpset))
+Biobase::exprs(tmpset) %>% 
+    reshape2::melt() %>% 
+    ggplot(aes(x = Var2, y = value),
+           xlab_name = "Intesity",
+           ylab_name = "Run") + 
+    geom_violin() + 
+    geom_jitter(height = 0, alpha =0.01)
+
+
+foo <- mqtxt_to_eset(
+    filename, 
+    normalize = FALSE, 
+    impute = FALSE, 
+    transformfun = log2,
+    additional_filter = additionalfilter,
+    nor)
+
+foo %>%
+    Biobase::exprs() %>% limma::normalizeBetweenArrays(method = "scale") %>%
+    reshape2::melt() %>% 
+    ggplot(aes(x = Var2, y = value),
+           xlab_name = "Intesity",
+           ylab_name = "Run") + 
+    geom_violin() + 
+    geom_jitter(height = 0, alpha =0.01)
+```
+
+
+```{r}
+
+myeset <- mqtxt_to_eset(filename, 
+						normalize = FALSE, 
+						impute = FALSE, 
+						transformfun = log2,
+						additional_filter = additionalfilter,
+						normalization_method = 'scale',
+						drop_cols = 'Intensity 40718-Hemi-A|CDKL5-'
+						)
+
+group_missing <- count_missing_by.data.frame(
+	Biobase::exprs(myeset), 
+	named_character_vector = c('Hemi' = 'Hemi-', 'WT' = 'WT-'))
+
+colnames(group_missing) <- paste0('N.missing.in.', colnames(group_missing))
+
+group_missing %>% lapply(table)
+
+missing_in_Hemi <- group_missing$N.missing.in.Hemi > 6
+missing_in_WT <- group_missing$N.missing.in.WT > 6
+
+missing_in_both <- missing_in_Hemi & missing_in_WT
+
+table(missing_in_both)
+
+
+raw_myeset <- mqtxt_to_eset(filename, 
+						normalize = TRUE, 
+						impute = TRUE, 
+						transformfun = log2,
+						additional_filter = additionalfilter, 
+						normalization_method = 'scale',
+						drop_cols = 'Intensity 40718-Hemi-A|CDKL5-'
+						)
+
+
+stopifnot(dim(myeset) == dim(raw_myeset))
+
+Biobase::fData(raw_myeset) <- cbind(Biobase::fData(raw_myeset), group_missing)
+
+names_column <- grep(
+	"Gene.names|gene names", 
+	colnames(Biobase::fData(myeset)),
+	ignore.case = TRUE, 
+	value = TRUE) %>% make.names()
+
+
+data_nonrandom_missing_WT <- raw_myeset[ missing_in_WT & !missing_in_Hemi, ]
+data_nonrandom_missing_Hemi <- raw_myeset[ missing_in_Hemi & !missing_in_WT, ]
+data_random_missing <- raw_myeset[ missing_in_both, ]
+data_non_missing <- raw_myeset[!missing_in_WT & !missing_in_Hemi ,]
+
+
+dim(data_nonrandom_missing_WT)
+dim(data_nonrandom_missing_Hemi)
+dim(data_random_missing)
+
+myeset <- raw_myeset[!missing_in_both ,]
+
+```
+
+# Processing
+
+```{r}
+#pairs(Biobase::exprs(myeset))
+plot_dists.eset(myeset)
+limma::plotMDS(myeset, dim.plot = c(1,2), plot = TRUE)
+limma::plotMDS(myeset, dim.plot = c(4,3), plot = TRUE)
+
+corrplot::corrplot(cor(Biobase::exprs(myeset)), order = 'hclus')
+boxplot(Biobase::exprs(myeset))
+
+Biobase::exprs(myeset) %>% 
+    reshape2::melt() %>% 
+    ggplot(aes(x = Var2, y = value),
+           xlab_name = "Intesity",
+           ylab_name = "Run") + 
+    geom_violin() + 
+    geom_jitter(height = 0, alpha =0.01)
+
+```
+
+# Model Fitting
+
+```{r}
+factor_vector <-  c( 'WT' = 'WT', 'Hemi' = "Hemi" )
+batch_vector <- c( '40718' = '40718', '32918' = "32918", '05918' = '50918' )
+
+design <- make_exp_design(myeset, 
+                          factor_vector = factor_vector, 
+                          reference_factor = "Hemi", 
+                          batch_vector = batch_vector)
+design
+
+fit <- limma::lmFit(myeset, design)
+fit2 <- limma::eBayes(fit)
+# limma::topTable(fit2, coef="s_mainfactorWT", confint = TRUE)
+
+dim(fit2)
+# extract_fit_table(fit.contr) %>% to_clipboard()
+```
+
+# Plotting
+
+# Nonrandom Missing Data
+
+```{r}
+makealltheplots(fit = fit2, coef = 's_mainfactorWT', plotprefix = 'nonMR_both_')
+```
+
+# NonMissing data
+
+
+```{r}
+
+data_non_missing %>% 
+	limma::lmFit(., design) %>%
+	limma::eBayes(.) %>%
+	makealltheplots(fit = ., coef = 's_mainfactorWT', plotprefix = 'nonMissing_')
+
+```
+
+# NONRANDOM in WT
+
+```{r}
+
+data_nonrandom_missing_WT %>% 
+	limma::lmFit(., design) %>%
+	limma::eBayes(.) %>%
+	makealltheplots(fit = ., coef = 's_mainfactorWT', plotprefix = 'nonMR_wt_')
+
+```
+
+# NONRANDOM in Hemi
+
+
+```{r}
+
+data_nonrandom_missing_Hemi %>% 
+	limma::lmFit(., design) %>%
+	limma::eBayes(.) %>%
+	makealltheplots(fit = ., coef = 's_mainfactorWT', plotprefix = 'nonMR_Hemi_')
+
+```
+
+# Randomly Missing Data
+
+```{r}
+
+data_random_missing %>% 
+	limma::lmFit(., design) %>%
+	limma::eBayes(.) %>%
+	makealltheplots(fit = ., coef = 's_mainfactorWT', plotprefix = 'MR_data_')
+
+```
+
+# Plots with the Raw data
+
+```{r}
+
+raw_myeset %>% 
+	limma::lmFit(., design) %>%
+	limma::eBayes(.) %>%
+	makealltheplots(fit = ., coef = 's_mainfactorWT', plotprefix = 'raw_data_')
+
+```
+
+```{r}
+myfit <- raw_myeset %>% 
+	limma::lmFit(., design) %>%
+	limma::eBayes(.)
+dim(myfit)
+
+my_TT <- topTable(myfit, number = 30, confint = TRUE, coef = 's_mainfactorWT') %>%
+    dplyr::select(-matches('score|prob|Ratio|window|PEP|__|Diagnostic'))
+
+my_TT %>% to_clipboard()
+
+my_evidences <- my_TT %>% dplyr::select(matches("^Evidence.ID")) %>% dplyr::mutate(Evidence.IDs = strsplit(Evidence.IDs, split = ";")) %>% tidyr::unnest() %>% .[[1]] %>% unique()
+
+evidencefile <- data.table::fread("../combined/txt/evidence.txt")
+
+evidencefile[id %in% my_evidences]$Sequence %>% unique() %>% to_clipboard()
+
+evidencefile[id %in% my_evidences] %>% .[grepl("PAPNS", Sequence)]
+```
+
+
+```{r}
+coef <- 's_mainfactorWT'
+
+mydf <- raw_myeset %>% 
+	limma::lmFit(., design) %>%
+	limma::eBayes(.) %>%
+	limma::topTable(., coef = coef,
+					number = Inf, 
+					confint = TRUE)
+
+mydf[[names_column]] <- paste0(
+	mydf[[names_column]], ": ", 
+	mydf[["Positions.within.proteins"]])
+
+
+mydf[["Site.Names"]] <- paste0(
+	mydf[[names_column]], "-", 
+	mydf[['Protein.names']],
+	": ", 
+	mydf[["Positions.within.proteins"]])
+
+mydf$Proteins %>% gsub(";.*", '', .) %>% to_clipboard()
+mydf %>% dplyr::filter(P.Value < 0.05) %>%
+	.$Proteins %>% gsub(";.*", '', .) %>% to_clipboard()
+g <- maplot.data.frame(
+	mydf,
+	pval = "adj.P.Val", 
+	foldchange = 'logFC',
+	nlabel = 20, 
+	labelcol = names_column,
+	colour_limits = c(0,0.05),
+	add_aes_base = list(x = 'AveExpr'),
+	xlab_name = 'Mean log2 Intensity',
+	ylab_name = 'Log2 Fold Change (WT-Hemi)',
+	label_arrangeTerms = 'P.Value')
+g
+
+g <- volcanoplot.data.frame(
+	mydf,
+	pval = 'P.Value',
+	add_aes_base = list(colour = "as.character(n.Missing)"),
+	nlabel = 20,
+	labelcol = names_column,
+	xlab_name =  'Log2 Fold Change (WT-Hemi)', 
+	ylab_name = 'P.Value') + 
+	guides(colour = guide_legend(title =  "Number of \nMissing Values"))
+g
+
+```
+
+```{r}
+paste0(format(Sys.time(), "%Y%m%d_%H%M%S_"), "data_set.csv")
+sessionInfo()
+
+```
+

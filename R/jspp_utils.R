@@ -100,16 +100,6 @@ mqtxt_to_sqlite <- function(txt_dir,
 
 
 
-### Design Maker
-#' Title
-#'
-#' @param eset
-#' @param factor_vector
-#'
-#' @return
-#' @export
-#'
-#' @examples
 make_exp_design <- function(
 	eset,
 	factor_vector = c(WT = 'WT', KO = 'KO'),
