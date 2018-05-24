@@ -77,7 +77,7 @@ mqtxt_to_eset <- function(filename,
 
 	if (impute) {
 		# TODO add a way to add the min to each column by separate
-		num_missing <- is.na(Biobase::exprs(Eset))
+		num_missing <- sum(is.na(Biobase::exprs(Eset)))
 		warning(glue::glue(
 				"Imputing {num_missing} Values from the dataset\n",
 				num_missing))
