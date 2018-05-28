@@ -1,7 +1,7 @@
 Package: jspputils
 Type: Package
 Title: Series of utilities to interface R with proteomics data analysis
-Version: 0.1.1
+Version: 0.1.3
 Author: Sebastian Paez
 Maintainer: Sebastian Paez <jspaezp@gmail.com>
 Description: Suite of tools to make life easyer ... reading data from the output
