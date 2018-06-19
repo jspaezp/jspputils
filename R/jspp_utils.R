@@ -8,9 +8,10 @@ mqtxt_to_eset <- function(filename,
 						  transformfun = log2,
 						  drop_cols = FALSE,
 						  normalization_method = NULL,
-						  missing_value = 0) {
+						  missing_value = 0,
+						  use_lfq = FALSE) {
 	# TODO consider changing this backend to fread
-	esetData <- readr::read_tsv(filename)
+	esetData <- data.table::fread(filename)
 
 	if (remove_decoys) {
 		if ("Reverse" %in% colnames(esetData)) {
@@ -42,9 +43,23 @@ mqtxt_to_eset <- function(filename,
 		esetData <- esetData[, !grepl(drop_cols, colnames(esetData))]
 	}
 
-	abundance_cols <- dplyr::select(esetData, dplyr::matches("Intensity.+")) %>%
-		dplyr::select(-dplyr::matches("__")) %>%
-		data.matrix()
+	abundance_cols <- esetData %>%
+		dplyr::select(dplyr::matches("Intensity.+")) %>%
+		dplyr::select(-dplyr::matches("__"))
+
+	if (any(grepl("LFQ", colnames(abundance_cols)))) {
+		if (use_lfq) {
+			abundance_cols <- dplyr::select(dplyr::matches("LFQ"))
+		} else {
+			warning(
+				paste0(
+					"Removing columns with LFQ in the name, check if you",
+					" want to use them with the 'use_lfq argument'"))
+			abundance_cols <- dplyr::select(-dplyr::matches("LFQ"))
+		}
+	}
+
+	abundance_cols <- data.matrix(abundance_cols)
 
 	if (!is.null(missing_value)) {
 		abundance_cols[abundance_cols == missing_value] <- NA
