@@ -17,7 +17,8 @@ mqtxt_to_eset <- function(filename,
 		if ("Reverse" %in% colnames(esetData)) {
 			esetData <- dplyr::filter(
 				esetData,
-				is.na(esetData[["Reverse"]]))
+				is.na(esetData[["Reverse"]]) |
+					esetData[["Reverse"]] == "" )
 		} else {
 			warning("No Reverse Column in the samples, skipping decoy removal\n")
 		}
@@ -27,7 +28,8 @@ mqtxt_to_eset <- function(filename,
 		if ("Potential contaminant" %in% colnames(esetData)) {
 			esetData <- dplyr::filter(
 				esetData,
-				is.na(esetData[["Potential contaminant"]]))
+				is.na(esetData[["Potential contaminant"]]) |
+					esetData[["Potential contaminant"]] == "")
 		} else {
 			warning("No Potential contaminant Column in the samples, skipping decoy removal\n")
 		}
