@@ -11,7 +11,7 @@ mqtxt_to_eset <- function(filename,
 						  missing_value = 0,
 						  use_lfq = FALSE) {
 	# TODO consider changing this backend to fread
-	esetData <- data.table::fread(filename)
+	esetData <- data.table::fread(filename, integer64 = 'double')
 
 	if (remove_decoys) {
 		if ("Reverse" %in% colnames(esetData)) {
@@ -61,6 +61,7 @@ mqtxt_to_eset <- function(filename,
 		}
 	}
 
+	abundance_cols[] <- lapply(abundance_cols, as.double)
 	abundance_cols <- data.matrix(abundance_cols)
 
 	if (!is.null(missing_value)) {
