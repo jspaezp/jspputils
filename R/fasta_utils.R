@@ -93,3 +93,19 @@ parse_ssearch_out <- function(ssearch_out) {
 		col.names = col_names)
 
 }
+
+
+# TODO write fasta handler and updater
+download_proteome <- function(
+	alias, proteomeID, reviewed, isoforms, file_format = 'fasta') {
+
+	add_to_querystring <- function(querystring, addition, code) {
+		paste0(querystring, "+AND+", code, ':', addition)
+	}
+
+	# https://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606
+	base_req <- "https://www.uniprot.org/uniprot/?query={querystring}"
+
+	querystring <- ""
+	curl::curl_download()
+}
