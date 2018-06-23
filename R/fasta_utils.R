@@ -41,6 +41,7 @@ make_tmp_fasta <- function(sequences, seq_names = NULL ) {
 #' @param ssearch_exe location of the ssearch executable (or alias in your path)
 #' @param seq_names optional names to be given to the sequences
 #' @param min_eval minimum E value to be reported, defaults to 0.01
+#' @param add_flags additional flags to be passed to ssearch
 #'
 #' @return tabular console output of ssearch as a character vector (element per line)
 #' @export
@@ -52,12 +53,21 @@ find_in_fasta <- function(
 	target_fasta,
 	ssearch_exe,
 	seq_names = NULL,
-	min_eval = 0.01) {
+	min_eval = 0.01,
+	add_flags = '') {
 	# Returns a list of DFs
-	tmpfasta <- make_tmp_fasta(sequences = sequences, seq_names = seq_names)
-	out <- system2(ssearch_exe,
-				   args = paste("-m 8C -E",min_eval , tmpfasta, target_fasta),
-				   stdout = TRUE)
+	tmpfasta <- make_tmp_fasta(
+		sequences = sequences,
+		seq_names = seq_names)
+	out <- system2(
+		ssearch_exe,
+		args = paste(
+			"-m 8C -E",
+			min_eval,
+			add_flags,
+			tmpfasta,
+			target_fasta),
+		stdout = TRUE)
 	return(out)
 
 }
@@ -65,7 +75,7 @@ find_in_fasta <- function(
 
 #' Parses the console output of ssearch
 #'
-#' It is designed to parse que tabular out of ssearch (flag -m 8C)
+#' It is designed to parse que tabular output of ssearch (flag -m 8C)
 #'
 #' @param ssearch_out tabular console output of ssearch as a character vector (element per line)
 #'
@@ -77,13 +87,16 @@ find_in_fasta <- function(
 #'     ss_out <- find_in_fasta(c('PEPTIDE'), 'arabidopsis.fasta', '~/usr/bin/ssearch36')
 #'     parse_ssearch_out(ss_out)
 #'     }
-
+#' \donttest{
+#'     parse_ssearch_out(readLines('./ssearch.out.txt'))
+#'     }
 parse_ssearch_out <- function(ssearch_out) {
 	# Output from "-m 8C" flag
 
 	RE <- ".* Fields: (.*)($|\\n)"
 	col_names_line <- ssearch_out[which(grepl(RE, ssearch_out))[[1]]]
 	col_names <- unlist(strsplit(gsub(RE, "\\1", col_names_line), ','))
+	ssearch_out <- ssearch_out[!grepl('^#', ssearch_out)]
 	if (length(ssearch_out) > 1) {
 		ssearch_out <- paste0(ssearch_out, collapse = "\n")
 	}
