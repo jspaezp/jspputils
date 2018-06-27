@@ -31,7 +31,8 @@ Imports: limma,
     htmlwidgets,
     plotly,
     data.table,
-    glue
+    glue,
+    curl
 Depends: dplyr,
     ggplot2
 biocViews: 

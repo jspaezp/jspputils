@@ -11,13 +11,14 @@ mqtxt_to_eset <- function(filename,
 						  missing_value = 0,
 						  use_lfq = FALSE) {
 	# TODO consider changing this backend to fread
-	esetData <- data.table::fread(filename)
+	esetData <- data.table::fread(filename, integer64 = 'double')
 
 	if (remove_decoys) {
 		if ("Reverse" %in% colnames(esetData)) {
 			esetData <- dplyr::filter(
 				esetData,
-				is.na(esetData[["Reverse"]]))
+				is.na(esetData[["Reverse"]]) |
+					esetData[["Reverse"]] == "" )
 		} else {
 			warning("No Reverse Column in the samples, skipping decoy removal\n")
 		}
@@ -27,7 +28,8 @@ mqtxt_to_eset <- function(filename,
 		if ("Potential contaminant" %in% colnames(esetData)) {
 			esetData <- dplyr::filter(
 				esetData,
-				is.na(esetData[["Potential contaminant"]]))
+				is.na(esetData[["Potential contaminant"]]) |
+					esetData[["Potential contaminant"]] == "")
 		} else {
 			warning("No Potential contaminant Column in the samples, skipping decoy removal\n")
 		}
@@ -59,6 +61,7 @@ mqtxt_to_eset <- function(filename,
 		}
 	}
 
+	abundance_cols[] <- lapply(abundance_cols, as.double)
 	abundance_cols <- data.matrix(abundance_cols)
 
 	if (!is.null(missing_value)) {
@@ -92,7 +95,7 @@ mqtxt_to_eset <- function(filename,
 
 	if (impute) {
 		# TODO add a way to add the min to each column by separate
-		num_missing <- is.na(Biobase::exprs(Eset))
+		num_missing <- sum(is.na(Biobase::exprs(Eset)))
 		warning(glue::glue(
 				"Imputing {num_missing} Values from the dataset\n",
 				num_missing))
