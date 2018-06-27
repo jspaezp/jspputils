@@ -226,9 +226,10 @@ makealltheplots <- function(
 	plotprefix = format(Sys.time(), "%Y%m%d_%H%M%S_"),
 	names_column,
 	P_value_col = "P.Value",
+	min_pval = 0.05,
 	nlabels = 20,
 	dry = TRUE,
-	saveplotly = FALSE) {
+	saveplotly = FALSE, ...) {
 
 	mydf <- limma::topTable(
 		fit, coef = coef,
@@ -258,7 +259,7 @@ makealltheplots <- function(
 		foldchange = 'logFC',
 		nlabel = nlabels,
 		labelcol = "Site.Names",
-		colour_limits = c(0,0.05),
+		colour_limits = c(0,min_pval),
 		xlab_name = 'Mean log2 Intensity',
 		ylab_name = paste0('Log2 Fold Change', contrast_name),
 		add_aes_base = list(x = 'AveExpr'))
@@ -274,7 +275,7 @@ makealltheplots <- function(
 		foldchange = 'logFC',
 		nlabel = nlabels,
 		labelcol = names_column,
-		colour_limits = c(0,0.05),
+		colour_limits = c(0,min_pval),
 		add_aes_base = list(x = 'AveExpr'),
 		xlab_name = 'Mean log2 Intensity',
 		ylab_name = paste0('Log2 Fold Change', contrast_name),
