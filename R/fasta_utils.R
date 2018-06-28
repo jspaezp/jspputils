@@ -73,6 +73,35 @@ find_in_fasta <- function(
 }
 
 
+#' Find Exact matches for sequences in a fasta file
+#'
+#' Its a simple wrapper arround `Biostrings::readAAStringSet` and
+#'  `Biostrings::vcountPattern`.
+#'
+#' @param sequences string vector
+#' @param target_fasta file location
+#'
+#' @return number of fasta entries in target that match each sequence
+#' @export
+#'
+#' @examples
+find_exact_in_fasta <- function(
+	sequences,
+	target_fasta) {
+	if (!requireNamespace("Biostrings", quietly = TRUE)) {
+		stop("Biostrings (Bioconductor) is not installed, please install to use this function")
+	}
+
+	targets <- Biostrings::readAAStringSet(target_fasta)
+	out <- purrr::map_int(sequences, .f = (
+		function(x) {
+			sum(as.logical(Biostrings::vcountPattern(x, targets)))
+		}
+	))
+	return(out)
+}
+
+
 #' Parses the console output of ssearch
 #'
 #' It is designed to parse que tabular output of ssearch (flag -m 8C)
@@ -107,35 +136,6 @@ parse_ssearch_out <- function(ssearch_out) {
 
 }
 
-
-# TODO write fasta handler and updater
-download_proteome <- function(
-	proteomeID,
-	reviewed, isoforms,
-	file_format = 'fasta',
-	out_file = tempfile(fileext = '.fasta'),
-	dry = TRUE) {
-
-
-	add_to_querystring <- function(querystring, addition, code) {
-		glue::glue(querystring, "+AND+", code, ':', addition)
-	}
-	querystring <- ""
-
-
-
-	# https://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606
-	base_req <- "https://www.uniprot.org/uniprot/?query={querystring}"
-
-	query_url <- glue::glue(base_req, querystring = querystring)
-	if (dry) {
-		curl::curl_download(url = query_url, destfile = out_file)
-	} else {
-		warning('Dry run, not downloading')
-		print(query_url)
-	}
-
-}
 
 
 #' Query the current files in the uniprot FTP
