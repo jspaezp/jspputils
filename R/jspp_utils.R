@@ -9,7 +9,8 @@ mqtxt_to_eset <- function(filename,
 						  drop_cols = FALSE,
 						  normalization_method = NULL,
 						  missing_value = 0,
-						  use_lfq = FALSE) {
+						  use_lfq = FALSE,
+						  spread_site_multiplicity = FALSE) {
 	# TODO consider changing this backend to fread
 	esetData <- data.table::fread(filename, integer64 = 'double')
 
@@ -45,9 +46,24 @@ mqtxt_to_eset <- function(filename,
 		esetData <- esetData[, !grepl(drop_cols, colnames(esetData))]
 	}
 
-	abundance_cols <- esetData %>%
-		dplyr::select(dplyr::matches("Intensity.+")) %>%
-		dplyr::select(-dplyr::matches("__"))
+
+	if (use_site_multiplicity) {
+		abundance_cols <- esetData %>%
+			dplyr::select(dplyr::matches("Intensity .+|^id$")) %>%
+			dplyr::select(dplyr::matches("__|^id$")) %>%
+			tidyr::gather(key, value, -id) %>%
+			tidyr::extract(key, c("Sample", "Multiplicity"), "(I.+)___(.+)") %>%
+			tidyr::spread(Sample, value)
+		esetData <- left_join(
+			abundance_cols,
+			esetData %>%
+				dplyr::select(-dplyr::matches("Intensity .+")))
+	} else {
+		abundance_cols <- esetData %>%
+			dplyr::select(dplyr::matches("Intensity.+")) %>%
+			dplyr::select(-dplyr::matches("__"))
+	}
+
 
 	if (any(grepl("LFQ", colnames(abundance_cols)))) {
 		if (use_lfq) {

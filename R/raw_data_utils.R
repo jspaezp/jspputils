@@ -56,6 +56,7 @@ get_xic <- function(
 	msaccess_executable = 'msaccess',
 	ms_level = 1,
 	dry = TRUE) {
+	# TODO add a way to cache the results
 
 	if (!dry) {
 		if (is.na(out_folder)) {
@@ -88,7 +89,10 @@ get_xic <- function(
 	}
 
     isotope_mods <- sort(
-    	rep(seq_len(num_isotopes)-1) * (1/charge), length(mz_min))
+    	rep(
+    		(seq_len(num_isotopes) - 1),
+    		length(mz_min)
+    		)) * (1.008664/charge) # mass of a neutron in amu
 
 
 	execution_commands <- glue::glue(
@@ -120,7 +124,7 @@ get_xic <- function(
 		stout <- system2(msaccess_executable, call, stdout = TRUE)
 		)
 	message('Output from the external command')
-	message(paste(stout), collapse = '\n')
+	message(paste(stout, collapse = '\n'))
 
 	out_files <- stout[grepl('Writing file', stout)]
 	out_files <- gsub("^.*Writing file (.*)$", '\\1', out_files)
@@ -131,14 +135,19 @@ get_xic <- function(
 }
 
 # This would be how to plot the output
-# foo %>% ggplot2::ggplot(ggplot2::aes(x =  rt, y = sumIntensity, colour = mass_range)) + ggplot2::geom_line() + ggplot2::scale_y_sqrt() + theme_bw()
-
+# foo  %>%
+#  ggplot2::ggplot(ggplot2::aes(x =  rt, y = sumIntensity, colour = mass_range)) +
+#  ggplot2::geom_line(alpha = 0.5) +
+#  ggplot2::geom_point(alpha = 0.5) +
+#  ggplot2::scale_y_sqrt() +
+#  ggplot2::facet_grid( mass_range ~ raw_file, scales = 'free') +
+#  ggplot2::theme_bw()
 
 # Get SIM
 #
 #
-	call <- glue::glue(
-'msaccess.exe {raw_files} -x "sic mzCenter={mz} radius={radius}',
-'radiusUnits=amu delimiter=tab" ',
-'--filter="msLevel {1}" --filter "scanTime [{rt_start},{rt_end}]" -v'
-)
+#	call <- glue::glue(
+#'msaccess.exe {raw_files} -x "sic mzCenter={mz} radius={radius}',
+#'radiusUnits=amu delimiter=tab" ',
+#'--filter="msLevel {1}" --filter "scanTime [{rt_start},{rt_end}]" -v'
+#)
