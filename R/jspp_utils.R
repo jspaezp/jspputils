@@ -47,7 +47,7 @@ mqtxt_to_eset <- function(filename,
 	}
 
 
-	if (use_site_multiplicity) {
+	if (spread_site_multiplicity) {
 		abundance_cols <- esetData %>%
 			dplyr::select(dplyr::matches("Intensity .+|^id$")) %>%
 			dplyr::select(dplyr::matches("__|^id$")) %>%
@@ -58,11 +58,14 @@ mqtxt_to_eset <- function(filename,
 			abundance_cols,
 			esetData %>%
 				dplyr::select(-dplyr::matches("Intensity .+")))
+		abundance_cols <- esetData %>%
+			dplyr::select(dplyr::matches("Intensity .+"))
 	} else {
 		abundance_cols <- esetData %>%
 			dplyr::select(dplyr::matches("Intensity.+")) %>%
 			dplyr::select(-dplyr::matches("__"))
 	}
+
 
 
 	if (any(grepl("LFQ", colnames(abundance_cols)))) {
@@ -78,9 +81,13 @@ mqtxt_to_eset <- function(filename,
 	}
 
 	abundance_cols[] <- lapply(abundance_cols, as.double)
+
 	abundance_cols <- data.matrix(abundance_cols)
 
+
 	if (!is.null(missing_value)) {
+		# TEMPORARY FIX for cases where 64bit ints are converted to 10e-316
+		abundance_cols[abundance_cols < 1] <- missing_value
 		abundance_cols[abundance_cols == missing_value] <- NA
 	}
 
@@ -122,6 +129,85 @@ mqtxt_to_eset <- function(filename,
 	}
 
 	return(Eset)
+}
+
+
+
+#' Gets the Evidence entries for a series of ids
+#'
+#' @param evidence_ids Evidence Ids to be searched (can be a multi-numeric)
+#' @param evidence_data data.frame, containing the evidence data (output of fread or equivalent)
+#' @param multiplicity integer, vector indicating number of modifications of the type per peptide
+#' @param evidence_multiplicity_col character, column name to use for the multiplicity in the evidence_data, defaults to "Phospho (STY)"
+#' @param multi_numeric_separator character, separator for multi-numeric columns, defaults to ';'
+#'
+#' @return data.frame, containing the matching evidence entries
+#' @export
+#'
+#' @examples
+mq_site_to_evidence <- function(
+	evidence_ids,
+	evidence_data,
+	multiplicity = NA,
+	evidence_multiplicity_col = "Phospho (STY)",
+	multi_numeric_separator = ';') {
+
+
+	if (!all(is.na(multiplicity))) {
+		site_glued_ids <- tibble::data_frame(
+			ev_ids = strsplit(evidence_ids, ';'),
+			Multiplicity = multiplicity) %>%
+			tidyr::unnest() %>%
+			dplyr::mutate(
+				glued_ids = glue::glue(
+					'{ev_ids}:{Multiplicity}',
+					ev_ids = ev_ids,
+					Multiplicity = Multiplicity )
+			) %>%
+			.[['glued_ids']]
+
+		evidence_data <- evidence_data  %>%
+			dplyr::mutate(
+				glued_ids = glue::glue(
+					'{ev_ids}:{Multiplicity}',
+					ev_ids = evidence_data[['id']],
+					Multiplicity = evidence_data[[evidence_multiplicity_col]] )
+			)
+
+		evidence_data <- evidence_data %>%
+			dplyr::filter(glued_ids %in% site_glued_ids)
+	} else {
+		evidence_data <- evidence_data %>%
+			dplyr::filter(
+				id %in% unlist(strsplit(evidence_ids, ';'),
+							   use.names = FALSE))
+	}
+	return(evidence_data)
+
+}
+
+
+
+
+#' Converts Maxquant to Skyline style peptide annotations
+#'
+#' @param annotated_peptides character, maxquant style annotated peptides \_PEPT(ph)IDE\_
+#'
+#' @return character, skyline style annotated peptide PEPT[+80]IDE
+#' @export
+#'
+#' @examples
+mq_to_skyline_peptides <- function(annotated_peptides) {
+	# TODO add argument to convert other modifications to the skyline version
+	warning("Only Phosphorylation, acetylation and oxidation have been implemented")
+	annotated_sequences <- annotated_peptides %>%
+		gsub('_', '', .) %>%
+		strsplit(';') %>%
+		gsub('\\(ph\\)', '[+80]', .) %>%
+		gsub('\\(ox\\)', '[+16]', .) %>%
+		gsub('\\(ac\\)', '[+42]', .) %>%
+		unlist(use.names = FALSE)
+	return(annotated_sequences)
 }
 
 
