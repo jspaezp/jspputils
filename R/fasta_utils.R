@@ -294,4 +294,57 @@ download_ref_proteome_fasta <- function(
 
 
 
+get_massdiff <- function(base, replacement, verbose = FALSE) {
+	massdiff <- Peptides::mw(replacement, monoisotopic = TRUE) -
+		Peptides::mw(base, monoisotopic = TRUE)
+
+	if (verbose) {
+		print(
+			glue::glue(
+				'{first} --> {second} = {massdiff}',
+				first = base,
+				second = replacement,
+				massdiff = massdiff)
+		)}
+	return(massdiff)
+}
+
+
+
+cigar_massdiff <- Vectorize(function(str, verbose = FALSE) {
+	replacement_pairs <- stringi::stri_extract_all(str, regex = '[A-Z]{2}')
+	replacement_pairs <- plyr::laply(replacement_pairs, strsplit, '')
+	foo <- lapply(
+		replacement_pairs,
+		function(x){
+			tmp <- get_massdiff(
+				x[1], x[2],
+				verbose = verbose)
+			return(sum(tmp))
+		})
+	return(sum(unlist(foo)))
+}, vectorize.args = 'str', USE.NAMES = FALSE)
+
+
+test_cigar_massdiff <-  function() {
+	cigar_massdiff('ST', verbose = FALSE)
+	cigar_massdiff('TS', verbose = FALSE)
+	cigar_massdiff('14', verbose = FALSE)
+	cigar_massdiff('1ST2IV', verbose = FALSE)
+
+	cigar_massdiff('1TN12', verbose = TRUE)
+	cigar_massdiff('14', verbose = TRUE)
+	cigar_massdiff('1ST2IV', verbose = TRUE)
+	cigar_massdiff(c('1ST2IV', '14'), verbose = TRUE)
+	cigar_massdiff(
+		c('1TN12', 'TS3QE3ST1TR1KQ',
+		  '4QK3SE1TY1KR', '3QH3ST1TL1KE',
+		  '3QIWF4TA1', 'SA4QV3ST1TV1'),
+		verbose = FALSE)
+}
+
+
+
+
+
 

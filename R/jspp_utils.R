@@ -199,12 +199,13 @@ mq_site_to_evidence <- function(
 #' @examples
 mq_to_skyline_peptides <- function(annotated_peptides) {
 	# TODO add argument to convert other modifications to the skyline version
-	warning("Only Phosphorylation, acetylation and oxidation have been implemented")
+	warning("Only Phosphorylation, acetylation, deamidation and oxidation have been implemented")
 	annotated_sequences <- annotated_peptides %>%
 		gsub('_', '', .) %>%
 		strsplit(';') %>%
 		gsub('\\(ph\\)', '[+80]', .) %>%
 		gsub('\\(ox\\)', '[+16]', .) %>%
+		gsub('\\(de\\)', '[+1]', .) %>%
 		gsub('\\(ac\\)', '[+42]', .) %>%
 		unlist(use.names = FALSE)
 	return(annotated_sequences)
