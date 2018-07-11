@@ -80,6 +80,7 @@ find_in_fasta <- function(
 #'
 #' @param sequences string vector
 #' @param target_fasta file location
+#' @param in_mem_fasta output of Biostrings::readAAStringSet stored in memmory
 #'
 #' @return number of fasta entries in target that match each sequence
 #' @export
@@ -87,12 +88,17 @@ find_in_fasta <- function(
 #' @examples
 find_exact_in_fasta <- function(
 	sequences,
-	target_fasta) {
+	target_fasta,
+	in_mem_fasta = NA) {
 	if (!requireNamespace("Biostrings", quietly = TRUE)) {
 		stop("Biostrings (Bioconductor) is not installed, please install to use this function")
 	}
 
-	targets <- Biostrings::readAAStringSet(target_fasta)
+	if(!is.na(in_mem_fasta)) {
+		targets <- in_mem_fasta
+	} else {
+		targets <- Biostrings::readAAStringSet(target_fasta)
+	}
 	out <- purrr::map_int(sequences, .f = (
 		function(x) {
 			sum(as.logical(Biostrings::vcountPattern(x, targets)))
