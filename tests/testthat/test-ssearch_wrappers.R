@@ -22,8 +22,7 @@ test_that("Parsing ssearch works", {
 
 test_that("Generating temporary fasta files work", {
 	seqs <- c("AAAAAAA", "BBBBBB", "IARVRDIKPVWALANDMNCSAG")
-	foo <- make_tmp_fasta(seqs)
-
+	expect_message({foo <- make_tmp_fasta(seqs)}, regexp = 'Writting fasta to .*')
 	expect_true(file.exists(foo))
 	expect_equal(length(readLines(foo)), 6)
 })
@@ -31,11 +30,13 @@ test_that("Generating temporary fasta files work", {
 
 test_that("Wrapper arround ssearch works", {
 	skip_if(system('ssearch') == "127", 'ssearch not in path, skipping wrapper testing')
-	seqs <- c("AAAAAAA", "BBBBBB", "IARVRDIKPVWALANDMNCSAG")
-	foo <- find_in_fasta(
-		sequences = seqs,
-		target_fasta = 	"~/uniprot-taxonomy-lambda.fasta",
-		ssearch_exe = "~/opt/fasta36/ssearch36.exe")
+
+	expect_s3_class({
+		seqs <- c("AAAAAAA", "BBBBBB", "IARVRDIKPVWALANDMNCSAG")
+		foo <- find_in_fasta(
+			sequences = seqs,
+			target_fasta = 	"~/uniprot-taxonomy-lambda.fasta")
+	}, 'character')
 })
 
 

@@ -29,16 +29,20 @@ test_that("An error is thrown when invalid arguments are given for proteome down
 })
 
 test_that("Dry run returns false and does not call curl", {
-	expect_false({
-		download_ref_proteome_fasta(
-			proteome_id = 'UP000054557',
-			species_id = '64320',
-			prefix = 'Zika',
-			domain = 'Viruses',
-			dry = TRUE,
-			dest_dir = tmpdir,
-			cached_uniprot_release = UP_db_virus)
-	})
+	expect_output({
+		expect_warning({
+			expect_false({
+				download_ref_proteome_fasta(
+					proteome_id = 'UP000054557',
+					species_id = '64320',
+					prefix = 'Zika',
+					domain = 'Viruses',
+					dry = TRUE,
+					dest_dir = tmpdir,
+					cached_uniprot_release = UP_db_virus)
+			})
+		}, regexp = 'Dry run, not downloading anything, printing URLS')
+	}, 'url.*File names.*')
 })
 
 skip_if(
@@ -47,44 +51,51 @@ skip_if(
 	)
 
 
+expect_downloading_output <- function(object) {
+	expect_output({
+		expect_true({
+			object
+		})
+	}, regexp = 'Downloading .*, to .*')
+}
+
 test_that("Can Download proteomes by proteomeID", {
-	expect_true({
-		download_ref_proteome_fasta(
-			proteome_id = 'UP000054557',
-			species_id = '64320',
-			prefix = 'Zika',
-			domain = 'Viruses',
-			dry = FALSE,
-			dest_dir = tmpdir,
-			cached_uniprot_release = UP_db_virus)
+	expect_downloading_output({
+			download_ref_proteome_fasta(
+				proteome_id = 'UP000054557',
+				species_id = '64320',
+				prefix = 'Zika',
+				domain = 'Viruses',
+				dry = FALSE,
+				dest_dir = tmpdir,
+				cached_uniprot_release = UP_db_virus)
 	})
 })
 
 
 test_that("Can Download proteomes by organismID", {
-	expect_true({
-		download_ref_proteome_fasta(
-			species_id = '308745',
-			prefix = 'Aspergillus_rambellii',
-			dry = FALSE,
-			dest_dir = tmpdir,
-			cached_uniprot_release = UP_db_euk)
+	expect_downloading_output({
+			download_ref_proteome_fasta(
+				species_id = '308745',
+				prefix = 'Aspergillus_rambellii',
+				dry = FALSE,
+				dest_dir = tmpdir,
+				cached_uniprot_release = UP_db_euk)
 	})
-	expect_true({
-		download_ref_proteome_fasta(
-			species_id = '64320',
-			prefix = 'Viruses',
-			domain = 'Viruses',
-			dry = FALSE,
-			dest_dir = tmpdir,
-			cached_uniprot_release = UP_db_virus)
+	expect_downloading_output({
+			download_ref_proteome_fasta(
+				species_id = '64320',
+				prefix = 'Viruses',
+				domain = 'Viruses',
+				dry = FALSE,
+				dest_dir = tmpdir,
+				cached_uniprot_release = UP_db_virus)
 	})
 })
 
 
-
 test_that("Can Download proteomes by proteomeID and organismID", {
-	expect_true({
+	expect_downloading_output({
 		download_ref_proteome_fasta(
 			proteome_id = 'UP000054557',
 			species_id = '64320',

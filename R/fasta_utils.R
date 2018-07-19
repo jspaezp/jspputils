@@ -3,6 +3,7 @@
 #'
 #' @param sequences Character vector of sequences to be written
 #' @param seq_names Character vector of names to be used in the fasta header (defaults to the sequences)
+#' @param warn_unique_names bool, logical indicating if the function should check that any names are duplicated
 #'
 #' @return Path to the temporary fasta
 #' @export
@@ -10,11 +11,15 @@
 #' @examples
 #' make_tmp_fasta(c("PEPTIDE", "TIDALES"))
 #' make_tmp_fasta(c("PEPTIDE", "TIDALES"), seq_names = c("Pep1", "Pep2"))
-make_tmp_fasta <- function(sequences, seq_names = NULL ) {
+make_tmp_fasta <- function(sequences, seq_names = NULL, warn_unique_names = TRUE ) {
 	fn  <- tempfile(pattern = "", fileext = ".fasta")
-	print(paste0("Writting fasta to ", fn))
+	message(paste0("Writting fasta to ", fn))
 	if (is.null(seq_names)) {
 		seq_names <- sequences
+	}
+
+	if (warn_unique_names) {
+		if (any(duplicated(sequences))) { warning('Not all names are unique') }
 	}
 
 	zz <- file(fn, "w")
@@ -300,9 +305,24 @@ download_ref_proteome_fasta <- function(
 
 
 
+#' Get mass difference between two peptides
+#'
+#' @param base str, base peptide sequence to be compared (diff will be positive if this one is bigger).
+#' @param replacement str, peptide sequence to be compared against.
+#' @param verbose bool, indicates wether print and message statements should be used, false indicades it should be silent.
+#'
+#' @return double, mass difference betweent he two peptides
+#' @export
+#'
+#' @examples
 get_massdiff <- function(base, replacement, verbose = FALSE) {
-	massdiff <- Peptides::mw(replacement, monoisotopic = TRUE) -
-		Peptides::mw(base, monoisotopic = TRUE)
+	if (any(is.na(c(base, replacement))) & verbose) {
+		if (verbose) warning('Either Base or replacement sequenes are NA')
+	}
+	suppressWarnings({
+		massdiff <- Peptides::mw(replacement, monoisotopic = TRUE) -
+			Peptides::mw(base, monoisotopic = TRUE)
+	})
 
 	if (verbose) {
 		print(
@@ -317,6 +337,15 @@ get_massdiff <- function(base, replacement, verbose = FALSE) {
 
 
 
+#' Calculates mass differenes by taking a cigar string as an input
+#'
+#' @param str string, cigar string (or vector of cigar strings). ie: '4QK3SE1TY1KR'
+#' @param verbose bool, indicates wether print and message statements should be used, false indicades it should be silent.
+#'
+#' @return double, vector of mass differences
+#' @export
+#'
+#' @examples
 cigar_massdiff <- Vectorize(function(str, verbose = FALSE) {
 	replacement_pairs <- stringi::stri_extract_all(str, regex = '[A-Z]{2}')
 	replacement_pairs <- plyr::laply(replacement_pairs, strsplit, '')
@@ -331,23 +360,6 @@ cigar_massdiff <- Vectorize(function(str, verbose = FALSE) {
 	return(sum(unlist(foo)))
 }, vectorize.args = 'str', USE.NAMES = FALSE)
 
-
-test_cigar_massdiff <-  function() {
-	cigar_massdiff('ST', verbose = FALSE)
-	cigar_massdiff('TS', verbose = FALSE)
-	cigar_massdiff('14', verbose = FALSE)
-	cigar_massdiff('1ST2IV', verbose = FALSE)
-
-	cigar_massdiff('1TN12', verbose = TRUE)
-	cigar_massdiff('14', verbose = TRUE)
-	cigar_massdiff('1ST2IV', verbose = TRUE)
-	cigar_massdiff(c('1ST2IV', '14'), verbose = TRUE)
-	cigar_massdiff(
-		c('1TN12', 'TS3QE3ST1TR1KQ',
-		  '4QK3SE1TY1KR', '3QH3ST1TL1KE',
-		  '3QIWF4TA1', 'SA4QV3ST1TV1'),
-		verbose = FALSE)
-}
 
 
 
